@@ -19,32 +19,38 @@
   },
   "scripts": {
     "build": "tsc && tsc-alias",
-    "test": "echo no tests yet",
+    "test": "tsdx test --runInBand --env=./test/custom-test-env.js",
     "prepublishOnly": "yarn build"
   },
   "engines": {
-    "node": ">=10"
+    "node": ">=12"
   },
   "devDependencies": {
     "@reduxjs/toolkit": "^1.8.1",
+    "@testing-library/jest-dom": "^5.16.4",
+    "@testing-library/react": "12.1.2",
     "@types/bn.js": "^5.1.0",
     "@types/elliptic": "^6.4.14",
+    "@types/react": "^18.0.8",
+    "@types/react-redux": "^7.1.24",
     "bn.js": "^5.2.0",
+    "jsbi": "^4.3.0",
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-redux": "^7.2.6",
     "starknet": "^3.9.0",
     "tsc": "^2.0.4",
     "tsc-alias": "^1.6.7",
+    "tsdx": "^0.14.1",
     "tslib": "^2.4.0",
     "typescript": "^4.6.4"
   },
   "peerDependencies": {
     "@reduxjs/toolkit": "1",
     "bn.js": "5",
-    "react-redux": "8",
     "react": "17",
-    "react-redux": "7",
-    "starknet": "3"
-  }
+    "starknet": "3",
+    "tslib": "2"
+  },
+  "dependencies": {}
 }
