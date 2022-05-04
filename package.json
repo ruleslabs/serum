@@ -1,6 +1,6 @@
 {
   "name": "@rulesorg/starknet-redux-multicall",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "React + Redux library to fetch starknet state at each new block through batched and cached calls",
   "main": "dist/index.js",
   "typings": "dist/index.d.ts",
