@@ -1,5 +1,5 @@
 import { useMemo, useEffect } from 'react'
-import { hash, Abi, FunctionAbi, RawArgs, stark } from 'starknet'
+import { hash, Abi, FunctionAbi, RawArgs, CallData } from 'starknet'
 import { useDispatch, useSelector } from 'react-redux'
 
 import { getStructsAbiFromAbiEntries } from './utils/abi'
@@ -17,7 +17,8 @@ function toCallState(callResult: CallResult, latestBlockNumber?: number): CallSt
   if (!latestBlockNumber) return LOADING_CALL_STATE
 
   const syncing = (blockNumber ?? 0) < latestBlockNumber
-  if (data && data !== {}) return { valid: true, loading: false, syncing, result: data, error: false }
+  if (data && Object.keys(data).length)
+    return { valid: true, loading: false, syncing, result: data, error: false }
 
   return { valid: true, loading: false, syncing, error: true }
 }
@@ -58,7 +59,7 @@ function useCallsDataSubscription(context: MulticallContext, calls: Array<Call |
 
         const result = callResults[toCallKey(call)]
         let data
-        if (result?.data && result?.data !== {}) data = result.data
+        if (result?.data && Object.keys(result.data).length) data = result.data
 
         return { valid: true, data, blockNumber: result?.blockNumber }
       }),
@@ -85,7 +86,7 @@ export function useMultipleContractSingleData(
   const selector = useMemo(() => hash.getSelectorFromName(methodName), [methodName])
 
   const calldata = useMemo(
-    () => (areCallInputsValid(callInputs) ? stark.compileCalldata(callInputs) : undefined),
+    () => (areCallInputsValid(callInputs) ? CallData.compile(callInputs) : undefined),
     [callInputs]
   )
 

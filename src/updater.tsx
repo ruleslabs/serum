@@ -1,6 +1,5 @@
-import React, { useEffect, useMemo, useRef } from 'react'
-import BN, { isBN } from 'bn.js'
-import { Result, Contract, AbiEntry } from 'starknet'
+import React, { Dispatch, useEffect, useMemo, useRef } from 'react'
+import { Contract, AbiEntry, num } from 'starknet'
 import { useSelector, useDispatch } from 'react-redux'
 
 import { parseCallKey, toCallKey } from './utils/callKey'
@@ -8,6 +7,9 @@ import useDebounce from './utils/useDebounce'
 import { WithMulticallState, MulticallState, CallResultData, StructsAbi, Call } from './types'
 import { MAX_CALLS_PER_CHUNK } from './constants'
 import { MulticallContext } from './context'
+import { MulticallActions } from './slice'
+
+type ContractCallResult = any
 
 function chunkCalls(calls: Call[]): Call[][] {
   const maxCallsPerChunk = Math.ceil(calls.length / Math.ceil(calls.length / MAX_CALLS_PER_CHUNK))
@@ -26,14 +28,16 @@ function chunkCalls(calls: Call[]): Call[][] {
   return chunks
 }
 
-async function fetchChunk(multicallContract: Contract, chunk: Call[]): Promise<Result> {
+async function fetchChunk(multicallContract: Contract, chunk: Call[]): Promise<ContractCallResult> {
   try {
-    return multicallContract.aggregate(
+    const { result } = await multicallContract.aggregate(
       chunk.reduce<(string | number)[]>((acc, call: Call) => {
         acc.push(call.address, call.selector, call.calldata.length, ...call.calldata)
         return acc
       }, [])
     )
+
+    return result
   } catch (error) {
     console.error('Failed to fetch chunk', error)
     throw error
@@ -41,7 +45,7 @@ async function fetchChunk(multicallContract: Contract, chunk: Call[]): Promise<R
 }
 
 function parseResponseField(
-  responseIterator: Iterator<BN>,
+  responseIterator: Iterator<bigint>,
   output: AbiEntry,
   structs: StructsAbi,
   parsedResult: CallResultData
@@ -85,7 +89,7 @@ function parseResponseField(
   }
 }
 
-function parseResponse(outputs: AbiEntry[], structs: StructsAbi, responseIterator: Iterator<BN>): CallResultData {
+function parseResponse(outputs: AbiEntry[], structs: StructsAbi, responseIterator: Iterator<bigint>): CallResultData {
   const resultObject = outputs.flat().reduce((acc, output) => {
     acc[output.name] = parseResponseField(responseIterator, output, structs, acc)
     if (acc[output.name] && acc[`${output.name}_len`]) delete acc[`${output.name}_len`]
@@ -125,6 +129,60 @@ function outdatedListeningKeys(
     return true
   })
 }
+
+// fetch handlers
+
+interface FetchChunkContext {
+  actions: MulticallActions
+  dispatch: Dispatch<any>
+  latestBlockNumber: number
+}
+
+function onFetchChunkSuccess(fetchChunkContext: FetchChunkContext, chunk: Call[], result: ContractCallResult) {
+  if (!Array.isArray(result) || !result.every(num.isBigInt)) {
+    fetchChunkContext.dispatch(
+      fetchChunkContext.actions.errorFetchingMulticallResults({
+        calls: chunk,
+        fetchingBlockNumber: fetchChunkContext.latestBlockNumber,
+      })
+    )
+    return
+  }
+
+  const responseIterator = result[Symbol.iterator]()
+
+  const results = chunk.reduce<{
+    [callKey: string]: CallResultData
+  }>((acc, call: Call) => {
+    const callKey = toCallKey(call)
+    const result = parseResponse(call.outputsAbi, call.structsAbi, responseIterator)
+
+    acc[callKey] = result
+    return acc
+  }, {})
+
+  if (Object.keys(results).length > 0) {
+    fetchChunkContext.dispatch(
+      fetchChunkContext.actions.updateMulticallResults({
+        resultsData: results,
+        blockNumber: fetchChunkContext.latestBlockNumber
+      })
+    )
+  }
+}
+
+function onFetchChunkFailure(fetchChunkContext: FetchChunkContext, chunk: Call[], error: any) {
+  console.error('Failed to fetch multicall chunk', chunk, error)
+
+  fetchChunkContext.dispatch(
+    fetchChunkContext.actions.errorFetchingMulticallResults({
+      fetchingBlockNumber: fetchChunkContext.latestBlockNumber,
+      calls: chunk
+    })
+  )
+}
+
+// UPDATER
 
 export interface UpdaterProps {
   context: MulticallContext
@@ -168,7 +226,7 @@ function Updater({ latestBlockNumber, contract, context }: UpdaterProps): null {
       cancellations: chunks.map((chunk: Call[]) => {
         let cancel: () => void = () => {}
 
-        const promise = new Promise<Result[]>(async (resolve, reject) => {
+        const promise = new Promise<ContractCallResult>(async (resolve, reject) => {
           cancel = reject
 
           try {
@@ -179,39 +237,15 @@ function Updater({ latestBlockNumber, contract, context }: UpdaterProps): null {
           }
         })
 
+        const fetchChunkContext = {
+          actions,
+          dispatch,
+          latestBlockNumber,
+        }
+
         promise
-          .then((result) => {
-            const [_, response] = result
-
-            if (!Array.isArray(response) || !response.every(isBN)) {
-              dispatch(
-                actions.errorFetchingMulticallResults({
-                  calls: chunk,
-                  fetchingBlockNumber: latestBlockNumber,
-                })
-              )
-              return
-            }
-
-            const responseIterator = response[Symbol.iterator]()
-
-            const results = chunk.reduce<{
-              [callKey: string]: CallResultData
-            }>((acc, call: Call) => {
-              const callKey = toCallKey(call)
-              const result = parseResponse(call.outputsAbi, call.structsAbi, responseIterator)
-
-              acc[callKey] = result
-              return acc
-            }, {})
-
-            if (Object.keys(results).length > 0)
-              dispatch(actions.updateMulticallResults({ resultsData: results, blockNumber: latestBlockNumber }))
-          })
-          .catch((error: any) => {
-            console.error('Failed to fetch multicall chunk', chunk, error)
-            dispatch(actions.errorFetchingMulticallResults({ fetchingBlockNumber: latestBlockNumber, calls: chunk }))
-          })
+          .then((result) => onFetchChunkSuccess(fetchChunkContext, chunk, result))
+          .catch((error: any) => onFetchChunkFailure(fetchChunkContext, chunk, error))
 
         return cancel
       }),

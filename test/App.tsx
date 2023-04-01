@@ -1,5 +1,4 @@
 import React from 'react'
-import { defaultProvider } from 'starknet'
 
 import { Provider } from 'react-redux'
 import { useLatestBlock, useEthBalance } from './hooks'
@@ -7,7 +6,7 @@ import { store } from './store'
 import { Updater } from './Updater'
 
 export function App() {
-  const blockNumber = useLatestBlock(defaultProvider)
+  const blockNumber = useLatestBlock()
 
   return (
     <Provider store={store}>

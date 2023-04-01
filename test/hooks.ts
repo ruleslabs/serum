@@ -1,6 +1,6 @@
 import JSBI from 'jsbi'
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { ProviderInterface, defaultProvider, Contract, Abi, GetBlockResponse } from 'starknet'
+import { Contract, Abi, GetBlockResponse, Provider } from 'starknet'
 
 import ERC20ABI from './ERC20.json'
 import MulticallABI from './multicall.json'
@@ -17,13 +17,17 @@ interface Uint256 {
   high?: string
 }
 
-export function useLatestBlock(provider: ProviderInterface): number | undefined {
+const provider = new Provider({
+  sequencer: { baseUrl: 'https://alpha4.starknet.io', feederGatewayUrl: 'feeder_gateway' }
+})
+
+export function useLatestBlock(): number | undefined {
   const [blockNumber, setBlockNumber] = useState<number | undefined>()
 
   const fetchBlock = useCallback(() => {
     if (!provider) return
     provider
-      .getBlock()
+      .getBlock('latest')
       .then((block: GetBlockResponse) => {
         setBlockNumber(block.block_number)
       })
@@ -70,6 +74,6 @@ export function useEthBalance(blockNumber: number | undefined, address: string) 
 
 export function useContract(): Contract | null {
   return useMemo(() => {
-    return new Contract(MulticallABI as Abi, MULTICALL_ADDRESS, defaultProvider)
+    return new Contract(MulticallABI as Abi, MULTICALL_ADDRESS, provider)
   }, [])
 }

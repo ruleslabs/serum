@@ -1,4 +1,4 @@
-# Starknet Redux Multicall
+# SERUM (Starknet Redux Multicall)
 
 React + Redux library to fetch starknet state at each new block through batched and cached calls.
 
