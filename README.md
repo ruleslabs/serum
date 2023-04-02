@@ -4,13 +4,13 @@ React + Redux library to fetch starknet state at each new block through batched 
 
 ### Setup
 
-`yarn add @rulesorg/starknet-redux-multicall` or `npm install @rulesorg/starknet-redux-multicall`
+`yarn add @rulesorg/serum` or `npm install @rulesorg/serum`
 
 ### Usage
 
 ```js
 import { combineReducers, createStore } from 'redux'
-import { createMulticall } from '@rulesorg/starknet-redux-multicall'
+import { createMulticall } from '@rulesorg/serum'
 
 // Create a multicall instance
 export const multicall = createMulticall({ reducerPath: 'multicall' })
