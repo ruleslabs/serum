@@ -47,7 +47,7 @@
   "peerDependencies": {
     "@reduxjs/toolkit": "1",
     "react": "17",
-    "starknet": "3",
+    "starknet": "5",
     "tslib": "2"
   },
   "dependencies": {}

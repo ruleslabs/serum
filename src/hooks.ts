@@ -1,10 +1,10 @@
 import { useMemo, useEffect } from 'react'
-import { hash, Abi, FunctionAbi, RawArgs, CallData } from 'starknet'
+import { hash, Abi, FunctionAbi, CallData } from 'starknet'
 import { useDispatch, useSelector } from 'react-redux'
 
 import { getStructsAbiFromAbiEntries } from './utils/abi'
 import { toCallKey, parseCallKey } from './utils/callKey'
-import { CallResult, CallState, Call, WithMulticallState } from './types'
+import { CallResult, CallState, Call, WithMulticallState, OptionalRawArgs } from './types'
 import { INVALID_CALL_STATE, LOADING_CALL_STATE } from './constants'
 import { areCallInputsValid } from './validation'
 import type { MulticallContext } from './context'
@@ -37,7 +37,7 @@ function useCallsDataSubscription(context: MulticallContext, calls: Array<Call |
           ?.map(toCallKey)
           ?.sort() ?? []
       ),
-    []
+    [calls]
   )
 
   useEffect(() => {
@@ -77,7 +77,7 @@ export function useMultipleContractSingleData(
   addresses: Array<string | undefined>,
   abi: Abi,
   methodName: string,
-  callInputs?: RawArgs
+  callInputs?: OptionalRawArgs
 ): CallState[] {
   const functionInterface = useMemo(() => abi.find((abi) => abi.name === methodName) as FunctionAbi, [abi, methodName])
   const outputsAbi = functionInterface?.outputs

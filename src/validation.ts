@@ -1,6 +1,7 @@
 import { RawArgs } from 'starknet'
+import { OptionalRawArgs } from './types'
 
-export function areCallInputsValid(callInputs?: RawArgs): callInputs is RawArgs {
+export function areCallInputsValid(callInputs?: OptionalRawArgs): callInputs is RawArgs {
   if (!callInputs) return false
 
   for (const key of Object.keys(callInputs)) {

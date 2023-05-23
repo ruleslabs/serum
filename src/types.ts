@@ -1,4 +1,4 @@
-import { AbiEntry, Calldata } from 'starknet'
+import { AbiEntry, Calldata, num } from 'starknet'
 
 export interface CallResultData {
   [key: string]: string | string[] | number | CallResultData
@@ -63,3 +63,12 @@ export interface MulticallResultsPayload {
   blockNumber: number
   resultsData: { [key: string]: CallResultData }
 }
+
+export type NullableBigNumberish = num.BigNumberish | undefined | null
+
+export type OptionalRawArgs = {
+  [inputName: string]: NullableBigNumberish | NullableBigNumberish[] | {
+      type: 'struct'
+      [k: string]: NullableBigNumberish
+  };
+} | NullableBigNumberish[]
